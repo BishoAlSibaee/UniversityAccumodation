@@ -13,7 +13,8 @@ use Exception;
 
 class Admins extends Controller
 {
-    function createNewAdmin(Request $request) {
+    function createNewAdmin(Request $request)
+    {
         $validation = Validator::make($request->all(), [
             'email' => 'required|email|unique:users,email',
             'name' => 'required|string',
@@ -21,7 +22,7 @@ class Admins extends Controller
             'password' => 'required|confirmed|string',
         ]);
         if ($validation->fails()) {
-            return response(['result'=>'failed','code'=>0,'error'=>$validation->errors()],200);
+            return response(['result' => 'failed', 'code' => 0, 'error' => $validation->errors()], 200);
         }
 
         $admin = new Admin();
@@ -32,35 +33,36 @@ class Admins extends Controller
 
         try {
             $admin->save();
-            return ['result'=>'success','code'=>1,"user"=>$admin,"error"=>""];
-        }
-        catch(Exception $e) {
-            return ['result'=>'failed','code'=>-1,"error"=>$e];
+            return ['result' => 'success', 'code' => 1, "user" => $admin, "error" => ""];
+        } catch (Exception $e) {
+            return ['result' => 'failed', 'code' => -1, "error" => $e];
         }
     }
 
-    function loginAdmin(Request $request) {
+    function loginAdmin(Request $request)
+    {
         $validation = Validator::make($request->all(), [
             'email' => 'required|exists:admins,email',
             'password' => 'required|min:4',
         ]);
 
         if ($validation->fails()) {
-            return response(["result"=>"failed",'code'=>0,"error"=>$validation->errors()],200);
+            return response(["result" => "failed", 'code' => 0, "error" => $validation->errors()], 200);
         }
 
-        $admin= Admin::where('email', $request->email)->first();
-    
+        $admin = Admin::where('email', $request->email)->first();
+
         if (!$admin || !Hash::check($request->password, $admin->password)) {
-            return ["result"=>"failed",'error' => Messages::getMessage("loginFailed"),'code'=>0];
+            return ["result" => "failed", 'error' => Messages::getMessage("loginFailed"), 'code' => 0];
         }
 
         $token = $admin->createToken('token')->plainTextToken;
 
-        return ['result'=>'success','code'=>1,'token'=>$token];
+        return ['result' => 'success', 'code' => 1, 'token' => $token];
     }
 
-    function createNewStudent(Request $request) {
+    function createNewStudent(Request $request)
+    {
         $validation = Validator::make($request->all(), [
             'email' => 'nullable|email|unique:users,email',
             'name' => 'required|string',
@@ -72,7 +74,7 @@ class Admins extends Controller
             'term' => 'string|nullable',
         ]);
         if ($validation->fails()) {
-            return response(['result'=>'failed','code'=>0,'error'=>$validation->errors()],200);
+            return response(['result' => 'failed', 'code' => 0, 'error' => $validation->errors()], 200);
         }
 
         $user = new User();
@@ -96,23 +98,24 @@ class Admins extends Controller
         if ($request->term != null) {
             $user->term = $request->term;
         }
-        
+
         $user->password = password_hash($request->student_number, PASSWORD_DEFAULT);
 
         try {
             $user->save();
-            return ['result'=>'success','code'=>1,"user"=>$user,"error"=>""];
-        }
-        catch(Exception $e) {
-            return ['result'=>'failed','code'=>-1,"error"=>$e];
+            return ['result' => 'success', 'code' => 1, "user" => $user, "error" => ""];
+        } catch (Exception $e) {
+            return ['result' => 'failed', 'code' => -1, "error" => $e];
         }
     }
 
-    function getAllStudents() {
+    function getAllStudents()
+    {
         return User::all();
     }
 
-    function makeReservation(Request $request) {
+    function makeReservation(Request $request)
+    {
         $validation = Validator::make($request->all(), [
             'student_id' => 'nullable|numeric|exists:users,id',
             'room_id' => 'required|numeric|exists:rooms,id',
@@ -122,7 +125,7 @@ class Admins extends Controller
             'expire_date' => 'required|date',
         ]);
         if ($validation->fails()) {
-            return response(['result'=>'failed','code'=>0,'error'=>$validation->errors()],200);
+            return response(['result' => 'failed', 'code' => 0, 'error' => $validation->errors()], 200);
         }
 
         $reservation = new Reservation();
@@ -135,27 +138,95 @@ class Admins extends Controller
 
         try {
             $reservation->save();
-            return ['result'=>'success','code'=>1,"reservation"=>$reservation,"error"=>""];
-        }
-        catch(Exception $e) {
-            return ['result'=>'failed','code'=>-1,"error"=>$e];
+            return ['result' => 'success', 'code' => 1, "reservation" => $reservation, "error" => ""];
+        } catch (Exception $e) {
+            return ['result' => 'failed', 'code' => -1, "error" => $e];
         }
     }
 
-    function searchStudentByName(Request $request) {
+    function searchStudentByName(Request $request)
+    {
         $validation = Validator::make($request->all(), [
             'student_name' => 'required|string',
         ]);
         if ($validation->fails()) {
-            return response(['result'=>'failed','code'=>0,'error'=>$validation->errors()],200);
+            return response(['result' => 'failed', 'code' => 0, 'error' => $validation->errors()], 200);
         }
 
         try {
-            $students = User::where('name','LIKE','%'.$request->student_name.'%')->get();
-            return ['result'=>'success','code'=>1,"students"=>$students,"error"=>""];
+            $students = User::where('name', 'LIKE', '%' . $request->student_name . '%')->get();
+            return ['result' => 'success', 'code' => 1, "students" => $students, "error" => ""];
+        } catch (Exception $e) {
+            return ['result' => 'failed', 'code' => -1, "error" => $e];
         }
-        catch(Exception $e) {
-            return ['result'=>'failed','code'=>-1,"error"=>$e];
+    }
+
+    function serachStudentBy(Request $request)
+    {
+        $validation = Validator::make($request->all(), [
+            'value' => 'required|string',
+            'by' => 'required|string',
+        ]);
+
+        if ($validation->fails()) {
+            return response(['result' => 'failed', 'code' => 0, 'error' => $validation->errors()], 200);
+        }
+
+        $user = User::where($request->by, $request->value)->get();
+        if (count($user) > 0) {
+            return ['result' => 'success', 'code' => 1, "user" => $user, "error" => ""];
+        } else {
+            return ['result' => 'success', 'code' => 1, "user" => 'Not Found Student', "error" => ""];
+        }
+    }
+
+
+    public function updateInfoStudent(Request $request)
+    {
+        $validation = Validator::make($request->all(), [
+            'id' => "required|numeric|exists:users,id",
+            'email' => 'nullable|email|unique:users,email',
+            'name' => 'nullable|string',
+            'mobile' => 'nullable|string|min:10|max:10|unique:users,mobile',
+            'student_number' => 'nullable|string|unique:users,student_number',
+            'nationality' => 'string|nullable',
+            'college' => 'string|nullable',
+            'study_year' => 'string|nullable',
+            'term' => 'string|nullable',
+        ]);
+        if ($validation->fails()) {
+            return response(['result' => 'failed', 'code' => 0, 'error' => $validation->errors()], 200);
+        }
+        $student = User::find($request->id);
+        if ($request->has('email')) {
+            $student->email = $request->email;
+        }
+        if ($request->has('name')) {
+            $student->name = $request->name;
+        }
+        if ($request->has('mobile')) {
+            $student->mobile = $request->mobile;
+        }
+        if ($request->has('student_number')) {
+            $student->student_number = $request->student_number;
+        }
+        if ($request->has('nationality')) {
+            $student->nationality = $request->nationality;
+        }
+        if ($request->has('college')) {
+            $student->college = $request->college;
+        }
+        if ($request->has('study_year')) {
+            $student->study_year = $request->study_year;
+        }
+        if ($request->has('term')) {
+            $student->term = $request->term;
+        }
+        try {
+            $student->save();
+            return ['result' => 'success', 'code' => 1, "user" => $student, "error" => ""];
+        } catch (Exception $e) {
+            return ['result' => 'failed', 'code' => -1, "error" => $e];
         }
     }
 }

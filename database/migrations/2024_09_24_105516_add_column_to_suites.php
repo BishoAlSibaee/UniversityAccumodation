@@ -4,19 +4,14 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        Schema::create('buildings', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('number')->unique();
-            $table->integer('lock_id');
-
+        Schema::table('suites', function (Blueprint $table) {
+            $table->string('lock_id')->nullable()->unique();
         });
     }
 
@@ -25,6 +20,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('buildings');
+        Schema::table('suites', function (Blueprint $table) {
+            $table->dropColumn('lock_id');
+        });
     }
 };
