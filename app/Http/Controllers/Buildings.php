@@ -21,26 +21,36 @@ class Buildings extends Controller
         $validation = Validator::make($request->all(), [
             'number' => 'required|numeric|unique:buildings,number',
             'name' => 'required|string|unique:buildings,name',
+            'numberOfFloor' => 'required|numeric',
+            'numberFloor' => 'required|numeric',
             'lock_id' => 'nullable|string|unique:buildings,lock_id',
         ]);
         if ($validation->fails()) {
             return response(['result' => 'failed', 'code' => 0, 'error' => $validation->errors()], 200);
         }
-
-        $building = new Building();
-        $building->number = $request->number;
-        $building->name = $request->name;
-        if ($request->has('lock_id')) {
-            $building->lock_id = $request->lock_id;
-        }
+        DB::beginTransaction();
 
         try {
+            $building = new Building();
+            $building->number = $request->number;
+            $building->name = $request->name;
+            if ($request->has('lock_id')) {
+                $building->lock_id = $request->lock_id;
+            }
             $building->save();
-            return ['result' => 'success', 'code' => 1, 'building' => $building, 'error' => ''];
-        } catch (Exception $e) {
-            return ['result' => 'failed', 'code' => -1, 'building' => '', 'error' => $e];
-        }
+            $addFloor = $this->addMultiFloor($building->id, $request->numberFloor, $request->numberOfFloor);
+            if (count($addFloor) > 0) {
+                DB::commit();
+                return ['result' => 'success', 'code' => 1, 'building' => $building, 'floors' => $addFloor, 'error' => ''];
+            } else {
+                DB::rollBack();
+                return ['result' => 'failed', 'code' => -1, 'building' => '', 'error' => 'Failed to add floors'];
+            }
 
+        } catch (Exception $e) {
+            DB::rollBack();
+            return ['result' => 'failed', 'code' => -1, 'building' => '', 'error' => $e->getMessage()];
+        }
     }
 
     function addFloor(Request $request)
@@ -83,48 +93,35 @@ class Buildings extends Controller
             'building_id' => 'required|numeric|exists:buildings,id',
             'floor_id' => 'required|numeric|exists:floors,id',
             'number' => 'required|numeric',
+            'room_ids' => 'required',
             'lock_id' => 'nullable|string|unique:suites,lock_id',
         ]);
         if ($validation->fails()) {
             return response(['result' => 'failed', 'code' => 0, 'error' => $validation->errors()], 200);
         }
-
-        // $floor = Floor::find($request->floor_id);
-        // $floor->suites();
-        // foreach ($floor->suites as $s) {
-        //     if ($s->number == $request->number) {
-        //         return ['result' => 'failed', 'code' => -1, 'suite' => '', 'error' => Messages::getMessage('suiteNumberExistsInFloor')];
-        //     }
-        // }
-
-        // $checkSuite = Suite::where('floor_id', $request->floor_id)->where('number', $request->number)->first();
-        // if ($checkSuite) {
-        //     return ['result' => 'failed', 'code' => -1, 'suite' => '', 'error' => Messages::getMessage('suiteNumberExistsInFloor')];
-        // }
-
-        //الجناح ما بيتكرر بنفس المبنى بولكن بيتكرر بمبنى تاني
-
         if ($this->checkSuiteInBuilding($request->building_id, $request->number)) {
-            return ['result' => 'failed', 'code' => -1, 'suite' => '', 'error' => 'The suite is already exists.'];
+            return ['result' => 'failed', 'code' => -1, 'suite' => '', 'error' => 'The suite already exists.'];
         }
-
-        $suite = new Suite();
-        $suite->building_id = $request->building_id;
-        $suite->floor_id = $request->floor_id;
-        $suite->number = $request->number;
-        if ($request->has('lock_id')) {
-            $suite->lock_id = $request->lock_id;
-        }
-
+        DB::beginTransaction();
         try {
+            $suite = new Suite();
+            $suite->building_id = $request->building_id;
+            $suite->floor_id = $request->floor_id;
+            $suite->number = $request->number;
+            if ($request->has('lock_id')) {
+                $suite->lock_id = $request->lock_id;
+            }
             $suite->save();
-            return ['result' => 'success', 'code' => 1, 'suite' => $suite, 'error' => ''];
+            $Ids = explode("-", $request->room_ids);
+            Room::whereIn('id', $Ids)->update(['suite_id' => $suite->id]);
+            $rooms = Room::whereIn('id', $Ids)->get();
+            DB::commit();
+            return ['result' => 'success', 'code' => 1, 'suite' => $suite, 'rooms' => $rooms, 'error' => ''];
         } catch (Exception $e) {
-            return ['result' => 'failed', 'code' => -1, 'suite' => '', 'error' => $e];
+            DB::rollBack();
+            return ['result' => 'failed', 'code' => -1, 'suite' => '', 'error' => $e->getMessage()];
         }
-
     }
-
     function addRoom(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -133,7 +130,7 @@ class Buildings extends Controller
             'suite_id' => 'nullable|numeric',
             'number' => 'required|string',
             'type_room' => 'required|string',
-            'capacity' => 'numeric|nullable',
+            'capacity' => 'required|numeric',
             'lock_id' => 'nullable|string|unique:rooms,lock_id',
         ]);
         if ($validation->fails()) {
@@ -158,9 +155,7 @@ class Buildings extends Controller
         $room->suite_id = $request->suite_id;
         $room->number = $request->number;
         $room->type_room = $request->type_room;
-        if ($request->capacity != null) {
-            $room->capacity = $request->capacity;
-        }
+        $room->capacity = $request->capacity;
         if ($request->has('lock_id')) {
             $room->lock_id = $request->lock_id;
         }
@@ -173,6 +168,65 @@ class Buildings extends Controller
 
     }
 
+    function addMultiFloor($building_id, $number, $numberOfFloor)
+    {
+        $building = Building::find($building_id);
+        $existingFloor = $building->floors()->where('building_id', '=', $building_id)->where('number', '>=', $number)->where('number', '<', $number + $numberOfFloor)->exists();
+        if ($existingFloor) {
+            return [];
+        }
+        $floors = [];
+        for ($i = 0; $i < $numberOfFloor; $i++) {
+            $newFloor = new Floor();
+            $newFloor->building_id = $building_id;
+            $newFloor->number = $number + $i;
+            $newFloor->save();
+            $floors[] = $newFloor;
+        }
+        return $floors;
+    }
+
+    // function addMultiRoom($buildingId, $floorId, $numberOfRoom, $numberRoom, $capacity, $typeRoom)
+    function addMultiRoom(Request $request)
+    {
+        $validation = Validator::make($request->all(), [
+            'buildingId' => 'required|numeric|exists:buildings,id',
+            'floorId' => 'required|numeric|exists:floors,id',
+            'numberOfRoom' => 'required|string',
+            'numberRoom' => 'required|string',
+            'typeRoom' => 'required|string',
+            'capacity' => 'required|numeric',
+        ]);
+        if ($validation->fails()) {
+            return ['result' => 'failed', 'code' => 0, 'error' => $validation->errors()];
+        }
+        try {
+            $floor = Floor::where('id', $request->floorId)->where('building_id', $request->buildingId)->first();
+            if (!$floor) {
+                return ['result' => 'failed', 'code' => -1, 'error' => 'Floor does not belong to this building'];
+            }
+            $existingRoom = Room::where('floor_id', $request->floorId)->where('number', '>=', $request->numberRoom)->where('number', '<', $request->numberRoom + $request->numberOfRoom)->exists();
+            if ($existingRoom) {
+                return ['result' => 'failed', 'code' => -1, 'error' => 'Room numbers already exist in this floor'];
+            }
+            $rooms = [];
+            for ($i = 0; $i < $request->numberOfRoom; $i++) {
+                $newRoom = new Room();
+                $newRoom->building_id = $request->buildingId;
+                $newRoom->floor_id = $request->floorId;
+                $newRoom->number = $request->numberRoom + $i;
+                $newRoom->capacity = $request->capacity;
+                $newRoom->type_room = $request->typeRoom;
+                $newRoom->suite_id = 0;
+                $newRoom->save();
+                $rooms[] = $newRoom;
+            }
+            return ['result' => 'success', 'code' => 1, 'rooms' => $rooms, 'error' => ''];
+
+        } catch (Exception $e) {
+            return ['result' => 'failed', 'code' => -1, "error" => $e];
+        }
+    }
     //=====================================GET===============================================
 
     function getBuildings()
@@ -231,38 +285,17 @@ class Buildings extends Controller
         return response(['result' => 'success', 'code' => 1, 'data' => $data], 200);
     }
 
-    function getBuildingData1(Request $request)
-    {
-        $validation = Validator::make($request->all(), [
-            'id' => 'required|numeric|exists:buildings,id',
-        ]);
-        if ($validation->fails()) {
-            return response(['result' => 'failed', 'code' => 0, 'error' => $validation->errors()], 400);
-        }
-        $building = Building::find($request->id);
-        $fff = $building->floors;
-        $rooms = Room::where('building_id', $request->id)->where('suite_id', 0)->get();
-        foreach ($fff as $f) {
-            $sss = $f->suites;
-            foreach ($sss as $s) {
-                $s->rooms;
-            }
-        }
-
-        return response(['result' => 'success', 'code' => 1, 'data' => $building, 'rooms' => $rooms], 200);
-    }
-
     function getBuildingData(Request $request)
     {
-        $validation = Validator::make($request->all(), [
-            'id' => 'required|numeric|exists:buildings,id',
-        ]);
+        // $validation = Validator::make($request->all(), [
+        //     'id' => 'required|numeric|exists:buildings,id',
+        // ]);
 
-        if ($validation->fails()) {
-            return response(['result' => 'failed', 'code' => 0, 'error' => $validation->errors()], 400);
-        }
-        $building = Building::with(['floors.suites.rooms'])->find($request->id);
-        $rooms = Room::where('building_id', $request->id)->where('suite_id', 0)->get();
+        // if ($validation->fails()) {
+        //     return response(['result' => 'failed', 'code' => 0, 'error' => $validation->errors()], 400);
+        // }
+        $building = Building::with(['floors.suites.rooms'])->get();
+        $rooms = Room::where('suite_id', 0)->get();
         return response(['result' => 'success', 'code' => 1, 'data' => $building, 'rooms' => $rooms], 200);
     }
     //=====================================DELETE===============================================
@@ -395,13 +428,14 @@ class Buildings extends Controller
         }
         $room = Room::find($request->id);
 
-        if ($request->has('number')) {
+        if ($request->has('number') && $request->number != $room->number) {
             if ($this->checkRoomInBuilding($room->building_id, $request->number)) {
                 return ['result' => 'failed', 'code' => -1, 'suite' => '', 'error' => 'The room is already exists.'];
             } else {
                 $room->number = $request->number;
             }
         }
+
         if ($request->has('type_room')) {
             $room->type_room = $request->type_room;
         }
@@ -420,20 +454,32 @@ class Buildings extends Controller
     {
         $validation = Validator::make($request->all(), [
             'id' => 'required|numeric|exists:suites,id',
-            'number' => 'required|string',
+            'number' => 'nullable|string',
+            'room_ids_to_add' => 'nullable|string',
+            'room_ids_to_remove' => 'nullable|string',
         ]);
         if ($validation->fails()) {
             return response(['result' => 'failed', 'code' => 0, 'error' => $validation->errors()], 200);
         }
         $suite = Suite::find($request->id);
-
-        if ($suite->number === $request->number && $this->checkSuiteInBuilding($suite->building_id, $request->number)) {
-            return ['result' => 'failed', 'code' => -1, 'suite' => '', 'error' => 'The suite is already exists.'];
-        }
-
-        $suite->number = $request->number;
-        try {
+        if ($request->has('number') && $request->number !== null) {
+            if ($suite->number !== $request->number && $this->checkSuiteInBuilding($suite->building_id, $request->number)) {
+                return ['result' => 'failed', 'code' => -1, 'suite' => '', 'error' => 'The suite already exists.'];
+            }
+            $suite->number = $request->number;
             $suite->update();
+        }
+        try {
+
+            if ($request->has('room_ids_to_add') && $request->room_ids_to_add !== null) {
+                $roomIdsToAdd = explode('-', $request->room_ids_to_add);
+                Room::whereIn('id', $roomIdsToAdd)->update(['suite_id' => $suite->id]);
+            }
+
+            if ($request->has('room_ids_to_remove') && $request->room_ids_to_remove !== null) {
+                $roomIdsToRemove = explode('-', $request->room_ids_to_remove);
+                Room::whereIn('id', $roomIdsToRemove)->update(['suite_id' => 0]);
+            }
             return ['result' => 'success', 'code' => 1, "error" => ""];
         } catch (Exception $e) {
             return ['result' => 'failed', 'code' => -1, "error" => $e->getMessage()];
@@ -464,18 +510,60 @@ class Buildings extends Controller
         }
     }
 
-    function updateBuilding(Request $request)
+    function updateBuilding1(Request $request)
     {
         $validation = Validator::make($request->all(), [
             'id' => 'required|numeric|exists:buildings,id',
+            'name' => 'required|string',
             'number' => 'required|string',
         ]);
         if ($validation->fails()) {
             return response(['result' => 'failed', 'code' => 0, 'error' => $validation->errors()], 200);
         }
+        //كمل هون وتأكد بكرا مشان موضوع التكرار
+        $building = Building::find($request->id);
+        if ($this->checkBuliding($request->name, $request->number)) {
+            return ['result' => 'failed', 'code' => -1, 'building' => '', 'error' => 'The building is already exists.'];
+        }
+        $building->name = $request->name;
+        $building->number = $request->number;
+        try {
+            $building->update();
+            return ['result' => 'success', 'code' => 1, "error" => ""];
+        } catch (Exception $e) {
+            return ['result' => 'failed', 'code' => -1, "error" => $e->getMessage()];
+        }
+
+    }
+
+    function updateBuilding(Request $request)
+    {
+        $validation = Validator::make($request->all(), [
+            'id' => 'required|numeric|exists:buildings,id',
+            'name' => 'required|string',
+            'number' => 'required|string',
+        ]);
+
+        if ($validation->fails()) {
+            return response(['result' => 'failed', 'code' => 0, 'error' => $validation->errors()], 200);
+        }
+        $checkName = Building::where('name', $request->name)->where('id', '!=', $request->id)->exists();
+        $checkNumber = Building::where('number', $request->number)->where('id', '!=', $request->id)->exists();
+        if ($checkName || $checkNumber) {
+            return ['result' => 'failed', 'code' => -1, 'building' => '', 'error' => 'The building name or number already exists.'];
+        }
 
         $building = Building::find($request->id);
+        $building->name = $request->name;
+        $building->number = $request->number;
+        try {
+            $building->update();
+            return ['result' => 'success', 'code' => 1, 'building' => $building, "error" => ""];
+        } catch (Exception $e) {
+            return ['result' => 'failed', 'code' => -1, "error" => $e->getMessage()];
+        }
     }
+
 
     function checkRoomInBuilding($building_id, $number)
     {
@@ -499,6 +587,14 @@ class Buildings extends Controller
     {
         $floors = Floor::where('building_id', $building_id)->where('number', $number)->exists();
         if ($floors) {
+            return true;
+        }
+    }
+
+    function checkBuliding($name, $number)
+    {
+        $building = Building::where('name', $name)->where('number', $number)->exists();
+        if ($building) {
             return true;
         }
     }

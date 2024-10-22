@@ -32,8 +32,10 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
     Route::post('updateRoom', [Buildings::class, 'updateRoom']);
     Route::post('updateSuite', [Buildings::class, 'updateSuite']);
     Route::post('updateFloor', [Buildings::class, 'updateFloor']);
+    Route::post('updateBuilding', [Buildings::class, 'updateBuilding']);
     Route::post('getDataById', [Buildings::class, 'getDataById']);
     Route::post('getBuildingData', [Buildings::class, 'getBuildingData']);
+    Route::post('addMultiRoom', [Buildings::class, 'addMultiRoom']);
     //=========================================Reservation=============================================
     Route::post('getReservationBy', [Reservations::class, 'getReservationBy']);
     Route::post('getReservationByDate', [Reservations::class, 'getReservationByDate']);
