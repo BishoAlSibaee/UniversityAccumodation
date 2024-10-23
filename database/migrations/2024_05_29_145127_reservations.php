@@ -19,6 +19,8 @@ return new class extends Migration
             $table->string('room_number');
             $table->date('start_date');
             $table->date('expire_date');
+            $table->timestamp('start_time')->nullable();
+            $table->timestamp('expire_time')->nullable();
         });
     }
 

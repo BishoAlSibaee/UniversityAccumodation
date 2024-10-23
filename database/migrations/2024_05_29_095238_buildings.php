@@ -15,8 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('number')->unique();
-            $table->integer('lock_id');
-
+            $table->string('lock_id')->nullable()->unique();
         });
     }
 
