@@ -185,8 +185,6 @@ class Buildings extends Controller
         }
         return $floors;
     }
-
-    // function addMultiRoom($buildingId, $floorId, $numberOfRoom, $numberRoom, $capacity, $typeRoom)
     function addMultiRoom(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -205,10 +203,11 @@ class Buildings extends Controller
             if (!$floor) {
                 return ['result' => 'failed', 'code' => -1, 'error' => 'Floor does not belong to this building'];
             }
-            $existingRoom = Room::where('floor_id', $request->floorId)->where('number', '>=', $request->numberRoom)->where('number', '<', $request->numberRoom + $request->numberOfRoom)->exists();
+            $existingRoom = Room::where('building_id', $request->buildingId)->where('number', '>=', $request->numberRoom)->where('number', '<', $request->numberRoom + $request->numberOfRoom)->exists();
             if ($existingRoom) {
-                return ['result' => 'failed', 'code' => -1, 'error' => 'Room numbers already exist in this floor'];
+                return ['result' => 'failed', 'code' => -1, 'error' => 'Room numbers already exist in this building'];
             }
+
             $rooms = [];
             for ($i = 0; $i < $request->numberOfRoom; $i++) {
                 $newRoom = new Room();
