@@ -129,32 +129,24 @@ class Buildings extends Controller
             'floor_id' => 'required|numeric|exists:floors,id',
             'suite_id' => 'nullable|numeric',
             'number' => 'required|string',
-            'type_room' => 'required|string',
+            'type_room' => 'required|numeric',
             'capacity' => 'required|numeric',
             'lock_id' => 'nullable|string|unique:rooms,lock_id',
         ]);
         if ($validation->fails()) {
             return response(['result' => 'failed', 'code' => 0, 'error' => $validation->errors()], 200);
         }
-        // $suite = Suite::find($request->suite_id);
-        // if ($request->suite_id != 0) {
-        //     $suite->rooms();
-        //     foreach ($suite->rooms() as $r) {
-        //         if ($r->number == $request->number) {
-        //             return ['result' => 'failed', 'code' => -1, 'suite' => '', 'error' => Messages::getMessage('roomNumberExistsInSuite')];
-        //         }
-        //     }
-        // }
 
         if ($this->checkRoomInBuilding($request->building_id, $request->number)) {
             return ['result' => 'failed', 'code' => -1, 'suite' => '', 'error' => 'The room is already exists.'];
         }
+
         $room = new Room();
         $room->building_id = $request->building_id;
         $room->floor_id = $request->floor_id;
         $room->suite_id = $request->suite_id;
         $room->number = $request->number;
-        $room->type_room = $request->type_room;
+        $room->room_types_id = $request->type_room;
         $room->capacity = $request->capacity;
         if ($request->has('lock_id')) {
             $room->lock_id = $request->lock_id;
@@ -167,7 +159,6 @@ class Buildings extends Controller
         }
 
     }
-
     function addMultiFloor($building_id, $number, $numberOfFloor)
     {
         $building = Building::find($building_id);
@@ -192,7 +183,7 @@ class Buildings extends Controller
             'floorId' => 'required|numeric|exists:floors,id',
             'numberOfRoom' => 'required|string',
             'numberRoom' => 'required|string',
-            'typeRoom' => 'required|string',
+            'typeRoom' => 'required|numeric',
             'capacity' => 'required|numeric',
         ]);
         if ($validation->fails()) {
@@ -215,7 +206,7 @@ class Buildings extends Controller
                 $newRoom->floor_id = $request->floorId;
                 $newRoom->number = $request->numberRoom + $i;
                 $newRoom->capacity = $request->capacity;
-                $newRoom->type_room = $request->typeRoom;
+                $newRoom->room_types_id = $request->typeRoom;
                 $newRoom->suite_id = 0;
                 $newRoom->save();
                 $rooms[] = $newRoom;

@@ -16,6 +16,16 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
     Route::post('searchStudentByName', [Admins::class, 'searchStudentByName']);
     Route::post('makeReservation', [Admins::class, 'makeReservation']);
     Route::post('serachStudentBy', [Admins::class, 'serachStudentBy']);
+    Route::post('getAllAdmin', [Admins::class, 'getAllAdmin']);
+    Route::post('updateAdmin', [Admins::class, 'updateAdmin']);
+    Route::post('inActiveAdmin', [Admins::class, 'inActiveAdmin']);
+    Route::post('updateInfoStudent', [Admins::class, 'updateInfoStudent']);
+    Route::post('deleteStudent', [Admins::class, 'deleteStudent']);
+    Route::post('addCollege', [Admins::class, 'addCollege']);
+    Route::get('getAllCollege', [Admins::class, 'getAllCollege']);
+    Route::post('checkReservation', [Admins::class, 'checkReservation']);
+    Route::get('getAllRoomType', [Admins::class, 'getAllRoomType']);
+    Route::post('addRoomType', [Admins::class, 'addRoomType']);
     //=========================================Buildings=============================================
     Route::post('addBuilding', [Buildings::class, 'addBuilding']);
     Route::post('addFloor', [Buildings::class, 'addFloor']);
@@ -39,4 +49,5 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
     //=========================================Reservation=============================================
     Route::post('getReservationBy', [Reservations::class, 'getReservationBy']);
     Route::post('getReservationByDate', [Reservations::class, 'getReservationByDate']);
+    Route::get('getReservation', [Reservations::class, 'getReservation']);
 });

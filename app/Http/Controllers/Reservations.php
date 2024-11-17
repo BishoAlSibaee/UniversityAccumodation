@@ -73,4 +73,9 @@ class Reservations extends Controller
 
         }
     }
+
+    function getReservation()
+    {
+        return Reservation::all();
+    }
 }
