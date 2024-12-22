@@ -18,8 +18,10 @@ return new class extends Migration {
             $table->string('room_number');
             $table->date('start_date');
             $table->date('expire_date');
+            $table->json('facility_ids')->nullable();
             $table->string('start_time')->nullable();
             $table->string('expire_time')->nullable();
+            $table->tinyInteger('is_available')->default(0)->comment("0=>is available , 1=>is Not available");
         });
     }
 

@@ -26,6 +26,11 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
     Route::post('checkReservation', [Admins::class, 'checkReservation']);
     Route::get('getAllRoomType', [Admins::class, 'getAllRoomType']);
     Route::post('addRoomType', [Admins::class, 'addRoomType']);
+    Route::post('addFacilitie', [Admins::class, 'addFacilitie']);
+    Route::get('getFacilitie', [Admins::class, 'getFacilitie']);
+    Route::post('getFacilitieByBuilding', [Admins::class, 'getFacilitieByBuilding']);
+    Route::post('getFacilitieByRoom', [Admins::class, 'getFacilitieByRoom']);
+    Route::post('updateReservation', [Admins::class, 'updateReservation']);
     //=========================================Buildings=============================================
     Route::post('addBuilding', [Buildings::class, 'addBuilding']);
     Route::post('addFloor', [Buildings::class, 'addFloor']);
@@ -47,7 +52,9 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
     Route::post('getBuildingData', [Buildings::class, 'getBuildingData']);
     Route::post('addMultiRoom', [Buildings::class, 'addMultiRoom']);
     //=========================================Reservation=============================================
-    Route::post('getReservationBy', [Reservations::class, 'getReservationBy']);
     Route::post('getReservationByDate', [Reservations::class, 'getReservationByDate']);
     Route::get('getReservation', [Reservations::class, 'getReservation']);
+    Route::post('getReservationByStudent', [Reservations::class, 'getReservationByStudent']);
+    Route::post('setReservationUnavailable', [Reservations::class, 'setReservationUnavailable']);
+    Route::post('getReservationByRoom', [Reservations::class, 'getReservationByRoom']);
 });
