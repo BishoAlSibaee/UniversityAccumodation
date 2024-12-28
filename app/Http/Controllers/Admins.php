@@ -119,7 +119,7 @@ class Admins extends Controller
             return ["result" => "failed", 'error' => Messages::getMessage("loginFailed"), 'code' => 0];
         }
         $token = $admin->createToken('token')->plainTextToken;
-        return ['result' => 'success', 'code' => 1, 'token' => $token];
+        return ['result' => 'success', 'code' => 1, 'name' => $admin->name, 'id' => $admin->id, 'token' => $token];
     }
     function createNewStudent(Request $request)
     {

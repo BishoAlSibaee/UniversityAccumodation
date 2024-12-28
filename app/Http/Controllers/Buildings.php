@@ -410,7 +410,7 @@ class Buildings extends Controller
         $validation = Validator::make($request->all(), [
             'id' => 'required|numeric|exists:rooms,id',
             'number' => 'nullable|string',
-            'type_room' => 'nullable|string',
+            'room_types_id' => 'nullable|numeric',
             'capacity' => 'nullable|numeric',
         ]);
         if ($validation->fails()) {
@@ -426,8 +426,8 @@ class Buildings extends Controller
             }
         }
 
-        if ($request->has('type_room')) {
-            $room->type_room = $request->type_room;
+        if ($request->has('room_types_id')) {
+            $room->room_types_id = $request->room_types_id;
         }
         if ($request->has('capacity')) {
             $room->capacity = $request->capacity;
