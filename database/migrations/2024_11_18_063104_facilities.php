@@ -18,7 +18,7 @@ return new class extends Migration {
             $table->integer('floor_id');
             $table->integer('suite_id');
             $table->integer('room_types_id');
-            $table->string('lock_id')->nullable()->unique();
+            $table->text('lock_data')->nullable()->unique();
         });
     }
 

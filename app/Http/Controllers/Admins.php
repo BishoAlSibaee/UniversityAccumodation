@@ -7,6 +7,7 @@ use App\Models\Facilitie;
 use App\Models\Room;
 use App\Models\RoomType;
 use App\Models\UpdateReservation;
+use App\SMS;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
@@ -46,6 +47,7 @@ class Admins extends Controller
             return ['result' => 'failed', 'code' => -1, "error" => $e];
         }
     }
+
     function updateAdmin(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -74,6 +76,7 @@ class Admins extends Controller
             return ['result' => 'failed', 'code' => -1, 'error' => $e->getMessage()];
         }
     }
+
     function inActiveAdmin(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -93,6 +96,7 @@ class Admins extends Controller
             return ['result' => 'failed', 'code' => 0, "user" => "", "error" => "Not Found"];
         }
     }
+
     function getAllAdmin()
     {
         $admin = Admin::where('is_active', '=', 0)->get();
@@ -102,6 +106,7 @@ class Admins extends Controller
             return ['result' => 'success', 'code' => 0, "user" => $admin, "error" => ""];
         }
     }
+
     function loginAdmin(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -121,6 +126,7 @@ class Admins extends Controller
         $token = $admin->createToken('token')->plainTextToken;
         return ['result' => 'success', 'code' => 1, 'name' => $admin->name, 'id' => $admin->id, 'token' => $token];
     }
+
     function createNewStudent(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -159,10 +165,12 @@ class Admins extends Controller
             return ['result' => 'failed', 'code' => -1, "error" => $e];
         }
     }
+
     function getAllStudents()
     {
         return User::all();
     }
+
     function makeReservation(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -181,6 +189,7 @@ class Admins extends Controller
             return response(['result' => 'failed', 'code' => 0, 'error' => $validation->errors()], 200);
         }
         DB::beginTransaction();
+        $sms = new SMS();
         try {
             foreach ($request->Reservations as $reservationData) {
                 $isAvailable = $this->checkReservationByRoom($reservationData['room_id'], $reservationData['start_date'], $reservationData['expire_date'], null);
@@ -204,12 +213,21 @@ class Admins extends Controller
                 $reservation->save();
             }
             DB::commit();
-            return ['result' => 'success', 'code' => 1, 'error' => ''];
+            $userIds = array_column($request->Reservations, 'student_id');
+            $users = User::whereIn('id', $userIds)->get()->keyBy('id');
+            foreach ($users as $user) {
+                $randomNumber = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+                $res = $sms->sendConfermationSMSToClient('Welcome to RATCO your password is ' . $randomNumber, $user['mobile']);
+                $user['password'] = password_hash($randomNumber, PASSWORD_DEFAULT);
+                $user->save();
+            }
+            return ['result' => 'success', 'code' => 1, 'error' => '', 'sms' => $res];
         } catch (Exception $e) {
             DB::rollBack();
             return ['result' => 'failed', 'code' => 0, 'error' => $e->getMessage()];
         }
     }
+
     function checkReservation(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -296,6 +314,7 @@ class Admins extends Controller
             return ['result' => 'failed', 'code' => 0, "AvailableRooms" => [], "error" => "Rooms Not Found"];
         }
     }
+
     function updateReservation(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -398,6 +417,7 @@ class Admins extends Controller
             return ['result' => 'failed', 'code' => -1, "error" => $e->getMessage()];
         }
     }
+
     function checkReservationByRoom($roomId, $startDate, $expireDate, $reservationId = null): bool
     {
         $check = false;
@@ -427,6 +447,7 @@ class Admins extends Controller
         }
         return $check;
     }
+
     function checkReservationForUser($userId, $startDate, $expireDate): bool
     {
         // التحقق إذا كان هناك حجز لنفس المستخدم يتداخل مع التواريخ المحددة
@@ -450,6 +471,7 @@ class Admins extends Controller
             ->exists();
         return !$exists; // إذا لم يكن هناك حجز يتداخل مع المدة، يرجع true
     }
+
     function getFacilitieByRoom(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -493,6 +515,7 @@ class Admins extends Controller
             return ['result' => 'failed', 'code' => 0, "facilities" => [], "error" => "Something went wrong .. try again"];
         }
     }
+
     function searchStudentByName(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -508,6 +531,7 @@ class Admins extends Controller
             return ['result' => 'failed', 'code' => -1, "error" => $e];
         }
     }
+
     function serachStudentBy(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -529,6 +553,7 @@ class Admins extends Controller
             return ['result' => 'failed', 'code' => 0, "user" => [], "error" => "Not Found Student"];
         }
     }
+
     function updateInfoStudent(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -581,6 +606,7 @@ class Admins extends Controller
             return ['result' => 'failed', 'code' => -1, "error" => $e->getMessage()];
         }
     }
+
     function deleteStudent(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -600,6 +626,7 @@ class Admins extends Controller
             return ['result' => 'failed', 'code' => -1, 'error' => $e->getMessage()];
         }
     }
+
     function addCollege(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -620,14 +647,17 @@ class Admins extends Controller
             return ['result' => 'failed', 'code' => -1, 'colleg' => '', 'error' => $e];
         }
     }
+
     function getAllCollege()
     {
         return College::all();
     }
+
     function getAllRoomType()
     {
         return RoomType::all();
     }
+
     function addRoomType(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -648,6 +678,7 @@ class Admins extends Controller
             return ['result' => 'failed', 'code' => -1, 'colleg' => '', 'error' => $e];
         }
     }
+
     function addFacilitie(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -676,6 +707,7 @@ class Admins extends Controller
             return ['result' => 'failed', 'code' => -1, 'error' => $e];
         }
     }
+
     function deleteFacilitie(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -691,8 +723,27 @@ class Admins extends Controller
             return ['result' => 'failed', 'code' => -1, "error" => $e];
         }
     }
+
     function getFacilitie(Request $request)
     {
         return Facilitie::all();
     }
+
+    function setLockDataValue(Request $request)
+    {
+        $validation = Validator::make($request->all(), [
+            'roomId' => 'required|numeric|exists:rooms,id',
+            'lockData' => 'required|string',
+        ]);
+        if ($validation->fails()) {
+            return response(['result' => 'failed', 'code' => 0, 'error' => $validation->errors()], 200);
+        }
+        $room = Room::where('id', $request->roomId)->update(['lock_data' => $request->lockData]);
+        if ($room) {
+            return ['result' => 'Success', 'code' => 1, 'error' => ''];
+        } else {
+            return ['result' => 'failed', 'code' => 0, 'error' => 'Data not saved'];
+        }
+    }
+
 }

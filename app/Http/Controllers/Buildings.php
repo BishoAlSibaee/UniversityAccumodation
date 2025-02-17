@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Facilitie;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Building;
@@ -10,6 +11,8 @@ use App\Models\Suite;
 use App\Models\Room;
 use App\Messages;
 use Exception;
+use App\Models\RoomType;
+
 use Illuminate\Support\Facades\DB;
 
 
@@ -275,18 +278,13 @@ class Buildings extends Controller
         return response(['result' => 'success', 'code' => 1, 'data' => $data], 200);
     }
 
-    function getBuildingData(Request $request)
+    function getBuildingData()
     {
-        // $validation = Validator::make($request->all(), [
-        //     'id' => 'required|numeric|exists:buildings,id',
-        // ]);
-
-        // if ($validation->fails()) {
-        //     return response(['result' => 'failed', 'code' => 0, 'error' => $validation->errors()], 400);
-        // }
         $building = Building::with(['floors.suites.rooms'])->get();
         $rooms = Room::where('suite_id', 0)->get();
-        return response(['result' => 'success', 'code' => 1, 'data' => $building, 'rooms' => $rooms], 200);
+        $facilitie = Facilitie::all();
+        $typeRoom = RoomType::all();
+        return response(['result' => 'success', 'code' => 1, 'data' => $building, 'rooms' => $rooms, 'facilitie' => $facilitie, 'typeRoom' => $typeRoom], 200);
     }
     //=====================================DELETE===============================================
 

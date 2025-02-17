@@ -1,14 +1,19 @@
 <?php
 
+use App\Http\Controllers\Users;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admins;
 use App\Http\Controllers\Buildings;
 use App\Http\Controllers\Reservations;
+use App\SMS;
 
 Route::post('create_admin', [Admins::class, 'createNewAdmin']);
 Route::post('login', [Admins::class, 'loginAdmin']);
-
+Route::post('setLockDataValue', [Admins::class, 'setLockDataValue']);
+Route::post('sendConfermationSMSToClient', [SMS::class, 'sendConfermationSMSToClient']);
+//=========================================User====================================================
+Route::post('loginStudent', [Users::class, 'loginStudent']);
 Route::group(['middleware' => 'auth:sanctum'], function () {
     //=========================================Admin=============================================
     Route::post('createStudent', [Admins::class, 'createNewStudent']);
@@ -57,4 +62,9 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
     Route::post('getReservationByStudent', [Reservations::class, 'getReservationByStudent']);
     Route::post('setReservationUnavailable', [Reservations::class, 'setReservationUnavailable']);
     Route::post('getReservationByRoom', [Reservations::class, 'getReservationByRoom']);
+    //=========================================User====================================================
+    Route::post('getInfoUser', [Users::class, 'getInfoUser']);
+    Route::post('getFacilitieByRoomForApp', [Users::class, 'getFacilitieByRoomForApp']);
+    Route::post('checkReservationAndUser', [Users::class, 'checkReservationAndUser']);
+
 });

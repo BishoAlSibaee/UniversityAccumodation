@@ -10,13 +10,6 @@ use Illuminate\Support\Facades\Validator;
 
 class Reservations extends Controller
 {
-    public static function checkStudentHasActiveReservation($student_id)
-    {
-        $student = User::find($student_id);
-        $today = date("Y-m-d");
-        $reservation = Reservation::where('student_id', $student->id)->where('start_date', '<=', $today)->where('expire_date', '>=', $today)->first();
-        return $reservation;
-    }
 
     function getReservationByStudent(Request $request)
     {
@@ -115,9 +108,18 @@ class Reservations extends Controller
             'id' => 'required|integer|exists:reservations,id'
         ]);
         if ($validation->fails()) {
+
             return response(['result' => 'failed', 'code' => 0, 'error' => $validation->errors()], 200);
         }
         Reservation::find($request->id)->update(['is_available' => 1]);
         return ['result' => 'success', 'code' => 1, 'error' => ''];
+    }
+
+    public static function checkStudentHasActiveReservation($student_id)
+    {
+        // $student = User::find($student_id);
+        $today = date("Y-m-d");
+        $reservation = Reservation::where('student_id', $student_id)->where('start_date', '<=', $today)->where('expire_date', '>=', $today)->where('is_available', '=', 0)->first();
+        return $reservation;
     }
 }
